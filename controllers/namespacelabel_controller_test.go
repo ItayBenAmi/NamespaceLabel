@@ -21,9 +21,12 @@ var _ = Describe("NamespaceLabel controller", func() {
 
 	// Define utility constants for object names and testing timeouts/durations and intervals.
 	const (
-		NamespaceLabelName = "test-namespacelabel"
-		Namespace          = "default"
-		NameLabel          = "app.kubernetes.io/name"
+		NamespaceLabelName       = "test-namespacelabel"
+		SecondNamespaceLabelName = "test-namespacelabel2"
+		Namespace                = "default"
+		NameLabel                = "app.kubernetes.io/name"
+		ProtectedLabelKey        = "app.kubernetes.io/instance"
+		ProtectedLabelValue      = "test"
 
 		timeout  = time.Second * 10
 		duration = time.Second * 10
@@ -65,6 +68,55 @@ var _ = Describe("NamespaceLabel controller", func() {
 
 			By("Checking the Namespace's labels were updated")
 
+			namespaceLookupKey := types.NamespacedName{Name: Namespace}
+			createdNamespace := &corev1.Namespace{}
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, namespaceLookupKey, createdNamespace)
+				if err != nil {
+					return false
+				}
+				return reflect.DeepEqual(createdNamespace.Labels, defaultLabels)
+			}, timeout, interval).Should(BeTrue())
+		})
+		It("Should not override the protected labels", func() {
+			By("Creating a new NamespaceLabel with a protected label")
+			ctx := context.Background()
+
+			// Make a deep copy of the original defaultLabels map
+			labelsToAdd := make(map[string]string)
+			for k, v := range defaultLabels {
+				labelsToAdd[k] = v
+			}
+
+			labelsToAdd[ProtectedLabelKey] = ProtectedLabelValue
+			namespaceLabel := &namespacelabelv1.NamespaceLabel{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "core.tutorial.kubebuilder.io/v1",
+					Kind:       "NamespaceLabel",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SecondNamespaceLabelName,
+					Namespace: Namespace,
+				},
+				Spec: namespacelabelv1.NamespaceLabelSpec{
+					Labels: labelsToAdd,
+				},
+			}
+			Expect(k8sClient.Create(ctx, namespaceLabel)).Should(Succeed())
+			namespacelabelLookupKey := types.NamespacedName{Name: NamespaceLabelName, Namespace: Namespace}
+			createdNamespaceLabel := &namespacelabelv1.NamespaceLabel{}
+
+			// We'll need to retry getting this newly created NamespaceLabel, given that creation may not immediately happen.
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, namespacelabelLookupKey, createdNamespaceLabel)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
+			By("Checking the new namespace doens;t include the protected label.")
 			namespaceLookupKey := types.NamespacedName{Name: Namespace}
 			createdNamespace := &corev1.Namespace{}
 
