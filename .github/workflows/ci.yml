@@ -23,9 +23,6 @@ jobs:
         run: go mod verify
       - name: Build
         run: go build -v ./...
-      - name: 
-      # This step is needed as the following one tries to remove
-      # kustomize for each test but has no permission to do so
       - name: Remove pre-installed kustomize
         run: sudo rm -f /usr/local/bin/kustomize
       - name: Perform the test
