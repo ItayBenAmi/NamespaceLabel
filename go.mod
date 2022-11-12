@@ -11,7 +11,9 @@ require (
 )
 
 require (
+	github.com/magefile/mage v1.9.0 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
+	go.elastic.co/ecszap v1.0.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 )
 
