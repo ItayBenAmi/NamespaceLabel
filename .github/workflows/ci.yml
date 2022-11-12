@@ -25,14 +25,10 @@ jobs:
         run: go build -v ./...
       - name: Remove pre-installed kustomize
         run: sudo rm -f /usr/local/bin/kustomize
-      # - name: Run make envtest
-      #   run: make envtest
       - name: Run script file
         run: |
           chmod +x ./install_kubebuilder_tools.sh
           ./install_kubebuilder_tools.sh
         shell: bash
-      # - name: Install envtest binaries
-      #   run: ./bin/setup-envtest use 1.19.2
       - name: Perform the test
         run: make test
