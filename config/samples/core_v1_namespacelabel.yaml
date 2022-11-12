@@ -8,4 +8,4 @@ spec:
         label_1: b
         label_2: b
         label_3: c
-        app.kubernetes.io/instance: kaki
+        app.kubernetes.io/instance: itay
