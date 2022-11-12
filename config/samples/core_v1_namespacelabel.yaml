@@ -1,0 +1,11 @@
+apiVersion: core.tutorial.kubebuilder.io/v1
+kind: NamespaceLabel
+metadata:
+    name: namespacelabel-sample2
+    namespace: default
+spec:
+    labels:
+        label_1: b
+        label_2: b
+        label_3: c
+        app.kubernetes.io/instance: kaki
