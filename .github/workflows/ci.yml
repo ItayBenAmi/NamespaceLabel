@@ -21,13 +21,13 @@ jobs:
         run: go get ./...
       - name: Verify dependencies
         run: go mod verify
-      - name: Run make envtest
-        run: make envtest
-      - name: Install envtest binaries
-        run: ./bin/setup-envtest use 1.19.2
       - name: Build
         run: go build -v ./...
       - name: Remove pre-installed kustomize
         run: sudo rm -f /usr/local/bin/kustomize
+      - name: Run make envtest
+        run: make envtest
+      - name: Install envtest binaries
+        run: ./bin/setup-envtest use 1.19.2
       - name: Perform the test
         run: make test
