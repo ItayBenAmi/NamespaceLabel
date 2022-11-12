@@ -3,6 +3,7 @@ name: CI
 # Trigger the CI on pull requests and direct pushes to any branch
 on:
   pull_request:
+    branches: [ main ]
 
 
 jobs:
