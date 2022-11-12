@@ -35,8 +35,6 @@ import (
 	corev1 "tutorial.kubebuilder.io/project/api/v1"
 )
 
-var logger = setUpLogger()
-
 // NamespaceLabelReconciler reconciles a NamespaceLabel object
 type NamespaceLabelReconciler struct {
 	client.Client
@@ -101,6 +99,7 @@ func setUpLogger() zap.Logger {
 //+kubebuilder:rbac:groups=apps,resources=namespaces/status,verbs=get
 
 func (r *NamespaceLabelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	var logger = setUpLogger()
 	logger = *logger.With(zap.String("Namespace", req.Namespace), zap.String("NamespaceLabel", req.Name))
 	logger.Info("Beginning reconcile logic for NamespaceLabel")
 
