@@ -55,8 +55,16 @@ func getProtectedLabels() []string {
 func getFinalLabelsMap(namespaceLabels corev1.NamespaceLabelList) map[string]string {
 	var protectedLabels = getProtectedLabels()
 
-	sort.Slice(namespaceLabels.Items, func(i, j int) bool {
-		return namespaceLabels.Items[j].Status.LastModifiedTime.After(namespaceLabels.Items[i].Status.LastModifiedTime.Time)
+	filteredNamespaceLabels := []corev1.NamespaceLabel{}
+
+	// filter out NamespaceLabels with nil values for LastModifiedTime
+	for index := range namespaceLabels.Items {
+		if namespaceLabels.Items[index].Status.LastModifiedTime != nil {
+			filteredNamespaceLabels = append(filteredNamespaceLabels, namespaceLabels.Items[index])
+		}
+	}
+	sort.Slice(filteredNamespaceLabels, func(i, j int) bool {
+		return filteredNamespaceLabels[j].Status.LastModifiedTime.After(filteredNamespaceLabels[i].Status.LastModifiedTime.Time)
 	})
 
 	finalNamespaceLabels := make(map[string]string)
