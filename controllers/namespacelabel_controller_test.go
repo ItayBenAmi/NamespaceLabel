@@ -136,8 +136,8 @@ var _ = Describe("NamespaceLabel controller", func() {
 		)
 		It("Should join all their Labels to in the namespace's Labels", func() {
 			By("Creating two new NamespaceLabels")
-			firstNamespaceLabels := map[string]string{"bob": "8"}
-			secondNamespaceLabels := map[string]string{"larry": "6"}
+			firstNamespaceLabels := map[string]string{"bob": "8", "gary": "5"}
+			secondNamespaceLabels := map[string]string{"bob": "7", "larry": "6"}
 
 			expectedLables := make(map[string]string)
 
