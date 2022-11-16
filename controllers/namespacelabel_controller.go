@@ -19,11 +19,9 @@ package controllers
 import (
 	"context"
 	"errors"
-	"os"
 	"sort"
 	"time"
 
-	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 	kcore "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "tutorial.kubebuilder.io/project/api/v1"
+	utils "tutorial.kubebuilder.io/project/internal/utils"
 )
 
 // NamespaceLabelReconciler reconciles a NamespaceLabel object
@@ -47,57 +46,55 @@ func getProtectedLabels() []string {
 		"app.kubernetes.io/part-of", "app.kubernetes.io/managed-by"}
 }
 
-// getFinalLabelsMap receives a list of NamespaceLabels, sorts them based on their LastModifiedTime field
+// filterNamespaceLabels filters out NamespaceLabels with nil values for LastModifiedTime
+func filterNamespaceLabels(namespaceLabels []corev1.NamespaceLabel) []corev1.NamespaceLabel {
+	filteredNamespaceLabels := []corev1.NamespaceLabel{}
+
+	for index := range namespaceLabels {
+		if namespaceLabels[index].Status.LastModifiedTime != nil {
+			filteredNamespaceLabels = append(filteredNamespaceLabels, namespaceLabels[index])
+		}
+	}
+
+	return filteredNamespaceLabels
+}
+
+// sortNamespaceLabelsByLastModifiedTime receives a slice of NamespaceLabels and returns the slice sorted by
+// the LastModifiedTime
+func sortNamespaceLabelsByLastModifiedTime(namespaceLabels []corev1.NamespaceLabel) []corev1.NamespaceLabel {
+	sortedNameSpaceLabels := make([]corev1.NamespaceLabel, len(namespaceLabels))
+	copy(sortedNameSpaceLabels, namespaceLabels)
+
+	sort.Slice(sortedNameSpaceLabels, func(i, j int) bool {
+		return sortedNameSpaceLabels[j].Status.LastModifiedTime.After(sortedNameSpaceLabels[i].Status.LastModifiedTime.Time)
+	})
+
+	return sortedNameSpaceLabels
+}
+
+// getFinalLabelsMap receives a NamespaceLabelList, sorts the items based on their LastModifiedTime field
 // and constructs a labels map containing the labels to set in the NamespaceLabel.
 // Two things are taken into cosideration here:
 // 1. To not include protected labels.
 // 2. If two or more NamespaceLabels have the same label, take the label from the most recently modified NamespaceLabel.
-func getFinalLabelsMap(namespaceLabels corev1.NamespaceLabelList) map[string]string {
+func getFinalLabelsMap(namespaceLabelList corev1.NamespaceLabelList) map[string]string {
 	var protectedLabels = getProtectedLabels()
 
-	filteredNamespaceLabels := []corev1.NamespaceLabel{}
-
-	// filter out NamespaceLabels with nil values for LastModifiedTime
-	for index := range namespaceLabels.Items {
-		if namespaceLabels.Items[index].Status.LastModifiedTime != nil {
-			filteredNamespaceLabels = append(filteredNamespaceLabels, namespaceLabels.Items[index])
-		}
-	}
-	sort.Slice(filteredNamespaceLabels, func(i, j int) bool {
-		return filteredNamespaceLabels[j].Status.LastModifiedTime.After(filteredNamespaceLabels[i].Status.LastModifiedTime.Time)
-	})
+	namespaceLabels := make([]corev1.NamespaceLabel, len(namespaceLabelList.Items))
+	copy(namespaceLabels, namespaceLabelList.Items)
+	namespaceLabels = filterNamespaceLabels(namespaceLabels)
+	namespaceLabels = sortNamespaceLabelsByLastModifiedTime(namespaceLabels)
 
 	finalNamespaceLabels := make(map[string]string)
-	for _, namespaceLabel := range namespaceLabels.Items {
+	for _, namespaceLabel := range namespaceLabels {
 		for labelName, labelValue := range namespaceLabel.Spec.Labels {
-			if contains(protectedLabels, labelName) == false {
+			if utils.Contains(protectedLabels, labelName) == false {
 				finalNamespaceLabels[labelName] = labelValue
 			}
 		}
 	}
 
 	return finalNamespaceLabels
-}
-
-// contains returns true if a string is contained within a slice, and false otherwise.
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-
-	return false
-}
-
-// setUpLogger sets up and returns an ecs logger.
-func setUpLogger() zap.Logger {
-	encoderConfig := ecszap.NewDefaultEncoderConfig()
-	core := ecszap.NewCore(encoderConfig, os.Stdout, zap.DebugLevel)
-	logger := zap.New(core, zap.AddCaller())
-	logger = logger.Named("NamespaceLabelLogger")
-
-	return *logger
 }
 
 //+kubebuilder:rbac:groups=core.tutorial.kubebuilder.io,resources=namespacelabels,verbs=get;list;watch;create;update;patch;delete
@@ -107,7 +104,7 @@ func setUpLogger() zap.Logger {
 //+kubebuilder:rbac:groups=apps,resources=namespaces/status,verbs=get
 
 func (r *NamespaceLabelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var logger = setUpLogger()
+	var logger = utils.SetUpLogger()
 	logger = *logger.With(zap.String("Namespace", req.Namespace), zap.String("NamespaceLabel", req.Name))
 	logger.Info("Beginning reconcile logic for NamespaceLabel")
 

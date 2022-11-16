@@ -78,6 +78,9 @@ var _ = Describe("NamespaceLabel controller", func() {
 				}
 				return reflect.DeepEqual(createdNamespace.Labels, defaultLabels)
 			}, timeout, interval).Should(BeTrue())
+
+			// Delete the namespacelabel for cleanup
+			Expect(k8sClient.Delete(ctx, createdNamespaceLabel)).Should(Succeed())
 		})
 		It("Should not override the protected labels", func() {
 			By("Creating a new NamespaceLabel with a protected label")
@@ -104,7 +107,7 @@ var _ = Describe("NamespaceLabel controller", func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, namespaceLabel)).Should(Succeed())
-			namespacelabelLookupKey := types.NamespacedName{Name: NamespaceLabelName, Namespace: Namespace}
+			namespacelabelLookupKey := types.NamespacedName{Name: SecondNamespaceLabelName, Namespace: Namespace}
 			createdNamespaceLabel := &namespacelabelv1.NamespaceLabel{}
 
 			// We'll need to retry getting this newly created NamespaceLabel, given that creation may not immediately happen.
@@ -127,6 +130,9 @@ var _ = Describe("NamespaceLabel controller", func() {
 				}
 				return reflect.DeepEqual(createdNamespace.Labels, defaultLabels)
 			}, timeout, interval).Should(BeTrue())
+
+			// Delete the namespacelabel for cleanup
+			Expect(k8sClient.Delete(ctx, createdNamespaceLabel)).Should(Succeed())
 		})
 	})
 	Context("When creating two NamespaceLabels", func() {
@@ -167,6 +173,18 @@ var _ = Describe("NamespaceLabel controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, firstNamespaceLabel)).Should(Succeed())
 
+			firstNamespacelabelLookupKey := types.NamespacedName{Name: FirstNamespaceLabelName, Namespace: Namespace}
+			firstCreatedNamespaceLabel := &namespacelabelv1.NamespaceLabel{}
+
+			// We'll need to retry getting this newly created NamespaceLabel, given that creation may not immediately happen.
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, firstNamespacelabelLookupKey, firstCreatedNamespaceLabel)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
 			// Create the second Namespace label
 			secondNamespaceLabel := &namespacelabelv1.NamespaceLabel{
 				TypeMeta: metav1.TypeMeta{
@@ -183,6 +201,18 @@ var _ = Describe("NamespaceLabel controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, secondNamespaceLabel)).Should(Succeed())
 
+			secondNamespacelabelLookupKey := types.NamespacedName{Name: SecondNamespaceLabelName, Namespace: Namespace}
+			secondCreatedNamespaceLabel := &namespacelabelv1.NamespaceLabel{}
+
+			// We'll need to retry getting this newly created NamespaceLabel, given that creation may not immediately happen.
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, secondNamespacelabelLookupKey, secondCreatedNamespaceLabel)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
 			By("Checking the namespace's labels have been updated correctly")
 			namespaceLookupKey := types.NamespacedName{Name: Namespace}
 			createdNamespace := &corev1.Namespace{}
@@ -194,6 +224,10 @@ var _ = Describe("NamespaceLabel controller", func() {
 				}
 				return reflect.DeepEqual(createdNamespace.Labels, expectedLables)
 			}, timeout, interval).Should(BeTrue())
+
+			// Delete the namespacelabel for cleanup
+			Expect(k8sClient.Delete(ctx, firstNamespaceLabel)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, secondNamespaceLabel)).Should(Succeed())
 
 		})
 	})
